@@ -956,11 +956,9 @@ impl<T: Config> Pallet<T> {
 			return StatementSetFilter::RemoveAll
 		}
 
-		let is_local = <Included<T>>::contains_key(&set.session, &set.candidate_hash);
-		// Reject remote disputes containing less votes than needed for confirmation.
-		if !is_local &&
-			(summary.state.validators_for.clone() | &summary.state.validators_against)
-				.count_ones() <= byzantine_threshold(summary.state.validators_for.len())
+		// Reject disputes containing less votes than needed for confirmation.
+		if (summary.state.validators_for.clone() | &summary.state.validators_against).count_ones() <=
+			byzantine_threshold(summary.state.validators_for.len())
 		{
 			return StatementSetFilter::RemoveAll
 		}
@@ -1013,8 +1011,6 @@ impl<T: Config> Pallet<T> {
 			}
 		};
 
-		let is_local = <Included<T>>::contains_key(&set.session, &set.candidate_hash);
-
 		// Import all votes. They were pre-checked.
 		let summary = {
 			let mut importer = DisputeStateImporter::new(dispute_state, now);
@@ -1034,11 +1030,10 @@ impl<T: Config> Pallet<T> {
 			Error::<T>::SingleSidedDispute,
 		);
 
-		// Reject remote disputes containing less votes than needed for confirmation.
+		// Reject disputes containing less votes than needed for confirmation.
 		ensure!(
-			is_local ||
-				(summary.state.validators_for.clone() | &summary.state.validators_against)
-					.count_ones() > byzantine_threshold(summary.state.validators_for.len()),
+			(summary.state.validators_for.clone() | &summary.state.validators_against).count_ones() >
+				byzantine_threshold(summary.state.validators_for.len()),
 			Error::<T>::UnconfirmedDispute,
 		);
 
@@ -1047,6 +1042,8 @@ impl<T: Config> Pallet<T> {
 		let candidate_hash = *candidate_hash;
 
 		if fresh {
+			let is_local = <Included<T>>::contains_key(&session, &candidate_hash);
+
 			Self::deposit_event(Event::DisputeInitiated(
 				candidate_hash,
 				if is_local { DisputeLocation::Local } else { DisputeLocation::Remote },
